@@ -10,7 +10,7 @@ dependencies:
   flutter:
     sdk: flutter
 
-#  flutter_dtmf: ^2.0.2
+  flutter_dtmf: ^2.0.2
   # Since flutter_masked_text2 is no longer supported, we use a forked version until a package with fix becomes available or an alternative is implemented
   flutter_masked_text2:
     git:

@@ -1,6 +1,7 @@
 library flutter_dialpad;
 
 import 'package:flutter/material.dart';
+import 'package:flutter_dtmf/dtmf.dart';
 import 'package:flutter_masked_text2/flutter_masked_text2.dart';
 // disabled temporarily
 // import 'package:flutter_dtmf/dtmf.dart';
@@ -270,6 +271,9 @@ class _DialPadState extends State<DialPad> {
 
   /// Handles keypad button press, this includes numbers and [DialActionKey] except [DialActionKey.backspace]
   void _onKeyPressed(String? value) {
+    if ((widget.enableDtmf) && value != null)
+      Dtmf.playTone(digits: value.trim(), samplingRate: 8000, durationMs: 160);
+
     if (value != null) {
       setState(() {
         _value += value;
