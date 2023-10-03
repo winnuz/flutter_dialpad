@@ -77,6 +77,9 @@ class DialPad extends StatefulWidget {
   /// Disabled temporarily until [flutter_dtmf] has been updated.
   final bool enableDtmf;
 
+  /// add in backspace button on top near output box
+  final bool showTopBackspaceButton;
+
   /// Builder for the keypad buttons. Defaults to [DialPadButtonBuilder].
   /// Note: this has not yet been fully integrated for customer use - this will be available in a future release.
   final DialPadButtonBuilder? keypadButtonBuilder;
@@ -156,6 +159,7 @@ class DialPad extends StatefulWidget {
     this.hideDialButton = false,
     this.hideBackspaceButton = false,
     this.hideSubtitle = false,
+    this.showTopBackspaceButton = false,
     this.outputMask = '(000) 000-0000',
     this.hint = '(000) 000-0000',
     this.buttonColor = Colors.grey,
@@ -273,7 +277,9 @@ class _DialPadState extends State<DialPad> {
   void _onKeyPressed(String? value) {
     if ((widget.enableDtmf) && value != null)
       Dtmf.playTone(digits: value.trim(), samplingRate: 8000, durationMs: 160);
-
+    if (widget.keyPressed != null && value != null) {
+      widget.keyPressed!(value);
+    }
     if (value != null) {
       setState(() {
         _value += value;
@@ -289,8 +295,23 @@ class _DialPadState extends State<DialPad> {
     }
 
     setState(() {
-      _value = _value.substring(0, _value.length - 1);
-      _controller.text = _value;
+      int cursorPos = _controller.selection.base.offset;
+      if (cursorPos  >= 1){
+        String suffixText = _controller.text.substring(cursorPos);
+        String prefixText = _controller.text.substring(0, cursorPos);
+        String newprefixText = prefixText.isNotEmpty ? _controller.text.substring(0,cursorPos-1):"";
+        String newValueText = "$newprefixText$suffixText";
+        _value = newValueText;
+        _controller.text = _value;
+
+        if (_value.isNotEmpty && _value.length >= cursorPos){
+          _controller.selection =
+              TextSelection.collapsed(offset: cursorPos -1);
+        }
+      } else {
+        _value = _value.substring(0, _value.length - 1);
+        _controller.text = _value;
+      }
     });
   }
 
@@ -381,7 +402,7 @@ class _DialPadState extends State<DialPad> {
           );
 
     /// Backspace button
-    final backspaceButton = widget.hideBackspaceButton || (_value.isEmpty && widget.hideBackspaceOnEmpty)
+    final Widget? backspaceButton = widget.hideBackspaceButton || (_value.isEmpty && widget.hideBackspaceOnEmpty)
         ? null
         : ActionButton(
             onTap: () => _onKeypadPressed(ActionKey.backspace()),
@@ -400,30 +421,40 @@ class _DialPadState extends State<DialPad> {
           );
 
     /// Footer contains the dial and backspace buttons
-    final footer = dialButton == null && backspaceButton == null
+    final footer = dialButton == null && ( backspaceButton == null || widget.showTopBackspaceButton)
         ? null
         : Row(
             children: [
               Expanded(child: Container()),
               Expanded(child: dialButton ?? Container()),
-              Expanded(child: backspaceButton ?? Container()),
+              if (!widget.showTopBackspaceButton)
+                Expanded(child: backspaceButton ?? Container()),
             ],
           );
 
     final children = <Widget>[
-      Padding(
-        padding: widget.textFieldPadding,
-        child: PhoneTextField(
-          textColor: widget.dialOutputTextColor,
-          textSize: widget.dialOutputTextSize,
-          decoration: InputDecoration(border: InputBorder.none, hintText: widget.hint),
-          controller: _controller,
-          copyToClipboard: widget.copyToClipboard,
-          readOnly: !widget.pasteFromClipboard,
-          scalingType: widget.scalingType,
-          minScalingSize: widget.minScalingSize,
-          maxScalingSize: widget.maxScalingSize,
-        ),
+      Row(
+        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+        mainAxisSize: MainAxisSize.min,
+          children: [
+            Flexible(child: Padding(
+              padding: widget.textFieldPadding,
+              child: PhoneTextField(
+                textColor: widget.dialOutputTextColor,
+                textSize: widget.dialOutputTextSize,
+                decoration: InputDecoration(border: InputBorder.none, hintText: widget.hint),
+                controller: _controller,
+                copyToClipboard: widget.copyToClipboard,
+                readOnly: !widget.pasteFromClipboard,
+                scalingType: widget.scalingType,
+                minScalingSize: widget.minScalingSize,
+                maxScalingSize: widget.maxScalingSize,
+              ),
+            ), flex:8),
+
+            if (widget.showTopBackspaceButton && backspaceButton != null)
+              Flexible(child:backspaceButton, flex: 1,)
+          ],
       ),
       Expanded(
         child: KeypadGrid(
